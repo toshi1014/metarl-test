@@ -13,7 +13,6 @@ def adaptation_per_task(model, dataset, loss_fn, train_step, device, create_grap
     lr_inner = 0.001
     task_accuracies = []
     total_loss = 0
-    outer_loss = 0
 
     # Initialize task-specific weights
     weights = OrderedDict(model.named_parameters())
@@ -52,7 +51,7 @@ def adaptation_per_task(model, dataset, loss_fn, train_step, device, create_grap
     task_acc = torch.eq(predicted_labels, query_y).float().mean().item()
     task_accuracies.append(task_acc)
 
-    return task_accuracies, total_loss, outer_loss, query_loss
+    return task_accuracies, query_loss,  total_loss
 
 
 def adaptation(model, optimizer, batch, loss_fn, train_step, device):
@@ -60,9 +59,10 @@ def adaptation(model, optimizer, batch, loss_fn, train_step, device):
 
     # Outer gradient accumulation (used during training)
     aggregated_gradients = None
+    outer_loss = 0
 
     for task_idx in range(num_task):  # Loop over tasks
-        task_accuracies, total_loss, outer_loss, query_loss = adaptation_per_task(
+        task_accuracies, query_loss, total_loss = adaptation_per_task(
             model,
             [batch[i][task_idx] for i in range(4)],
             loss_fn,
@@ -86,7 +86,7 @@ def adaptation(model, optimizer, batch, loss_fn, train_step, device):
             ]
             outer_loss += query_loss
 
-    # Outer-loop update (only during training)
+    # Outer-loop update
     for param, grad in zip(model.parameters(), aggregated_gradients):
         param.grad = grad
     optimizer.step()
@@ -101,7 +101,7 @@ def validation(model, batch, loss_fn, train_step, device):
     num_task = batch[0].size(0)
 
     for task_idx in range(num_task):  # Loop over tasks
-        task_accuracies, total_loss, outer_loss, query_loss = adaptation_per_task(
+        task_accuracies, query_loss, total_loss = adaptation_per_task(
             model,
             [batch[i][task_idx] for i in range(4)],
             loss_fn,

@@ -1,119 +1,60 @@
-import pickle
-import os
 import torch
 import numpy as np
-import torchvision
+import utils
+import prepare
 import maml
 import train
-import prepare
+import torchvision
 
 
 def main():
-
-    os.makedirs("model/", exist_ok=True)
-    os.makedirs("log/", exist_ok=True)
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    torch.backends.cudnn.benchmark = True
+    utils.setup_directories(["log"])
+    device = utils.initialize_device()
 
     model = maml.MAML().to(device)
+    model = utils.load_model(model, "model/model.pth", device)
     loss_fn = torch.nn.CrossEntropyLoss().to(device)
-    if torch.cuda.is_available():
-        checkpoint = torch.load("model/model.pth")
-    else:
-        checkpoint = torch.load(
-            "model/model.pth", map_location=torch.device('cpu'))
-    model.load_state_dict(checkpoint['model_state_dict'])
-    result_path = "./log/test"
 
-    # dataset
-
-    # Transform を作成する。
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
+    test_img, test_target = utils.prepare_dataset(
+        torchvision.datasets.CIFAR100,
+        "./data",
+        train=False,
+        transform=transform,
+        max_samples=10000,
+    )
 
-    # Dataset を作成する。
-    download_dir = "./data"  # ダウンロード先は適宜変更してください
-    testset = torchvision.datasets.CIFAR100(
-        download_dir, train=False, transform=transform, download=True)
-
-    # test用の画像データとラベルデータ
-    img = []
-    target = []
-    for i, (im, tar) in enumerate(testset):
-        if 4999 < i and i < 10000:
-            img.append(im)
-            target.append(tar)
-        elif i > 10000:
-            break
-
-    img = torch.stack(img, dim=0)
-    target = torch.tensor(target)
-
-    test_loss_log = []
-    test_acc_log = []
-
-    all_class = 100  # 全データの全クラス数
-    num_class = 5  # N-way K-shot の N
-    n_class = 3  # 画像がカラー
-    img_size = 32  # 画僧のサイズ 32 * 32
-
-    print("len of test_img:", len(img))
-    print("len of test_target:", len(target))
-
-    print("10 loop")
-
-    outer_batch0 = 20
-
-    ob_test = []
-    # test 用の taskset を作り outer_batch の次元を加える。
-    for i in range(outer_batch0):
-        # print( "i:", i )
-        test = prepare.build_task_dataset(
-            img,
-            target,
-            num_all_task=all_class // num_class,
-            num_task=20,
-            k_support=20,
-            k_query=20,
-            num_class=5,
-            inner_batch=1,
-            is_val=True,
-        )
-        ob_test.append(test)
-
-    # test
+    test_tasks = prepare.build_tasks(
+        img=test_img,
+        target=test_target,
+        num_classes=20,
+        num_class=5,
+        num_task=20,
+        k_support=20,
+        k_query=20,
+        is_val=True,
+        outer_batch=10,
+    )
     db_test = prepare.create_batch_of_tasks(
-        ob_test, is_shuffle=False, outer_batch_size=10)
-    acc_all_test = []
-    loss_all_test = []
+        test_tasks, is_shuffle=False, outer_batch_size=10)
 
-    f = open('log.txt', 'a')
+    acc_all_test, loss_all_test = [], []
+
     for loop, test_task in enumerate(db_test):
         loss, acc = train.validation(
-            model,
-            test_task,
-            loss_fn,
-            train_step=10,
-            device=device,
-            # n_class=n_class,
-            # img_size=img_size,
-        )
+            model, test_task, loss_fn, train_step=10, device=device)
         acc_all_test.append(acc)
         loss_all_test.append(loss)
+        print(f"Loop: {loop}, Test Loss: {np.mean(loss_all_test)
+              :.4f}, Acc: {np.mean(acc_all_test):.4f}")
 
-        print('loop:', loop, 'Test loss:', np.mean(
-            loss_all_test), '\tacc:', np.mean(acc_all_test))
-        # test_loss_log.append( np.mean(loss_all_test) )
-        # test_acc_log.append( np.mean(acc_all_test ) )
-        f.write('Test' + str(np.mean(acc_all_test)) + '\n')
-
-    all_result = {'test_loss': loss_all_test, 'test_acc': acc_all_test}
-
-    with open(result_path + '.pkl', 'wb') as f:
-        pickle.dump(all_result, f)
+    utils.save_results(
+        {'test_loss': loss_all_test, 'test_acc': acc_all_test},
+        "log/test_results"
+    )
 
 
 if __name__ == "__main__":
