@@ -13,7 +13,13 @@ def conv_block(in_channels, out_channels):
 def functional_conv(x, weights, biases, bn_weights, bn_biases):
     x = torch.nn.functional.conv2d(x, weights, biases, padding=1)
     x = torch.nn.functional.batch_norm(
-        x, running_mean=None, running_var=None, weight=bn_weights, bias=bn_biases, training=True)
+        x,
+        running_mean=None,
+        running_var=None,
+        weight=bn_weights,
+        bias=bn_biases,
+        training=True,
+    )
     x = torch.nn.functional.relu(x)
     x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
     return x
@@ -39,8 +45,13 @@ class MAML(torch.nn.Module):
 
     def adaptation(self, x, weights):
         for block in [1, 2, 3, 4]:
-            x = functional_conv(x, weights[f'conv{block}.0.weight'], weights[f'conv{block}.0.bias'],
-                                weights.get(f'conv{block}.1.weight'), weights.get(f'conv{block}.1.bias'))
+            x = functional_conv(
+                x,
+                weights[f'conv{block}.0.weight'],
+                weights[f'conv{block}.0.bias'],
+                weights.get(f'conv{block}.1.weight'),
+                weights.get(f'conv{block}.1.bias'),
+            )
 
         x = x.view(x.size(0), -1)
         # print( " x size:", x.size() )

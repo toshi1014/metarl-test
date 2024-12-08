@@ -1,7 +1,6 @@
+import random
 import torch
 import numpy as np
-import random
-from torch.utils.data import Dataset
 
 
 # Set a random seed for reproducibility
@@ -16,15 +15,6 @@ def random_seed(value):
 # Select a specified number of random items from a list
 def select(items, num_samples):
     return random.sample(items.tolist(), num_samples)
-
-
-# Create a batch of tasks from a taskset
-def create_batch_of_tasks(taskset, is_shuffle=True, outer_batch_size=4):
-    indices = list(range(len(taskset)))
-    if is_shuffle:
-        random.shuffle(indices)
-    selected_indices = select(torch.tensor(indices), outer_batch_size)
-    return [taskset[i] for i in selected_indices]
 
 
 # Build task datasets for meta-learning
@@ -78,3 +68,27 @@ def build_task_dataset(img, target, num_all_task, num_task, k_support, k_query, 
         torch.stack(query_imgs),
         torch.stack(query_targets),
     )
+
+
+def build_tasks(img, target, num_classes, num_class, num_task, k_support, k_query, is_val, outer_batch):
+    return [
+        build_task_dataset(
+            img, target,
+            num_all_task=num_classes // num_task,
+            num_task=num_task,
+            k_support=k_support,
+            k_query=k_query,
+            num_class=num_class,
+            inner_batch=3 if not is_val else 1,
+            is_val=is_val
+        )
+        for _ in range(outer_batch)
+    ]
+
+
+def create_batch_of_tasks(taskset, is_shuffle=True, outer_batch_size=4):
+    indices = list(range(len(taskset)))
+    if is_shuffle:
+        random.shuffle(indices)
+    selected_indices = select(torch.tensor(indices), outer_batch_size)
+    return [taskset[i] for i in selected_indices]

@@ -1,11 +1,11 @@
+import pickle
+import os
 import torch
 import numpy as np
-from torchvision import datasets, transforms
-from maml import MAML
-from train import test_model
-import pickle
-from build_task_dataset9_16 import build_task_dataset, create_batch_of_tasks
-import os
+import torchvision
+import maml
+import train
+import prepare
 
 
 def main():
@@ -16,7 +16,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     torch.backends.cudnn.benchmark = True
 
-    model = MAML().to(device)
+    model = maml.MAML().to(device)
     loss_fn = torch.nn.CrossEntropyLoss().to(device)
     if torch.cuda.is_available():
         checkpoint = torch.load("model/model.pth")
@@ -29,14 +29,14 @@ def main():
     # dataset
 
     # Transform を作成する。
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
     # Dataset を作成する。
     download_dir = "./data"  # ダウンロード先は適宜変更してください
-    testset = datasets.CIFAR100(
+    testset = torchvision.datasets.CIFAR100(
         download_dir, train=False, transform=transform, download=True)
 
     # test用の画像データとラベルデータ
@@ -71,24 +71,38 @@ def main():
     # test 用の taskset を作り outer_batch の次元を加える。
     for i in range(outer_batch0):
         # print( "i:", i )
-        test = build_task_dataset(img, target, num_all_task=all_class // num_class,
-                                  num_task=20, k_support=20, k_query=20, num_class=5, inner_batch=1, is_val=True)
+        test = prepare.build_task_dataset(
+            img,
+            target,
+            num_all_task=all_class // num_class,
+            num_task=20,
+            k_support=20,
+            k_query=20,
+            num_class=5,
+            inner_batch=1,
+            is_val=True,
+        )
         ob_test.append(test)
 
     # test
-    db_test = create_batch_of_tasks(
+    db_test = prepare.create_batch_of_tasks(
         ob_test, is_shuffle=False, outer_batch_size=10)
     acc_all_test = []
     loss_all_test = []
 
     f = open('log.txt', 'a')
     for loop, test_task in enumerate(db_test):
-        # random_seed(123)
-        loss, acc = test_model(model, test_task, loss_fn, train_step=10,
-                               device=device, n_class=n_class, img_size=img_size)
+        loss, acc = train.validation(
+            model,
+            test_task,
+            loss_fn,
+            train_step=10,
+            device=device,
+            # n_class=n_class,
+            # img_size=img_size,
+        )
         acc_all_test.append(acc)
         loss_all_test.append(loss)
-        # random_seed(int(time.time() % 10))
 
         print('loop:', loop, 'Test loss:', np.mean(
             loss_all_test), '\tacc:', np.mean(acc_all_test))
