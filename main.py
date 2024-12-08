@@ -115,7 +115,6 @@ def main():
                 train_task,
                 loss_fn,
                 train_step=5,
-                train=True,
                 device=device,
             )
             results["train_loss"].append(loss)
