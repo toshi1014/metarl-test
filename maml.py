@@ -54,5 +54,4 @@ class MAML(torch.nn.Module):
             )
 
         x = x.view(x.size(0), -1)
-        # print( " x size:", x.size() )
         return torch.nn.functional.linear(x, weights['logits.weight'], weights['logits.bias'])

@@ -7,7 +7,7 @@ import train
 import torchvision
 
 
-def main():
+def test():
     utils.setup_directories(["log"])
     device = utils.initialize_device()
 
@@ -48,8 +48,7 @@ def main():
             model, test_task, loss_fn, train_step=10, device=device)
         acc_all_test.append(acc)
         loss_all_test.append(loss)
-        print(f"Loop: {loop}, Test Loss: {np.mean(loss_all_test)
-              :.4f}, Acc: {np.mean(acc_all_test):.4f}")
+        print(f"Loop: {loop}, Test Loss: {np.mean(loss_all_test):.4f}, Acc: {np.mean(acc_all_test):.4f}") \
 
     utils.save_results(
         {'test_loss': loss_all_test, 'test_acc': acc_all_test},
@@ -58,4 +57,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    test()

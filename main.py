@@ -24,13 +24,11 @@ def main():
     val_img, val_target = utils.prepare_dataset(
         torchvision.datasets.CIFAR100, "./data", train=False, transform=transform, max_samples=5000)
 
-    num_classes = 100
-    config = {
-        "num_class": 3,
-        "num_task": 5,
-        "outer_batch": 5,
-        "epochs": 300,
-    }
+    NUM_CLASSES = 100
+    NUM_CLASS = 3
+    NUM_TASK = 5
+    OUTER_BATCH = 5
+    EPOCHS = 300
 
     results = {
         "train_loss": [],
@@ -39,24 +37,30 @@ def main():
         "val_acc": [],
     }
     validation_tasks = prepare.build_tasks(
-        img=val_img, target=val_target, num_classes=num_classes, num_class=config[
-            "num_class"],
-        num_task=config["num_task"], k_support=20, k_query=20, is_val=True, outer_batch=config["outer_batch"]
+        img=val_img,
+        target=val_target,
+        num_classes=NUM_CLASSES,
+        num_class=NUM_CLASS,
+        num_task=NUM_TASK,
+        k_support=20,
+        k_query=20,
+        is_val=True,
+        outer_batch=OUTER_BATCH,
     )
 
     global_step = 0
-    for epoch in range(config["epochs"]):
+    for epoch in range(EPOCHS):
         training_tasks = prepare.create_batch_of_tasks(
             prepare.build_tasks(
                 img=train_img,
                 target=train_target,
-                num_classes=num_classes,
-                num_class=config["num_class"],
-                num_task=config["num_task"],
+                num_classes=NUM_CLASSES,
+                num_class=NUM_CLASS,
+                num_task=NUM_TASK,
                 k_support=10,
                 k_query=15,
                 is_val=False,
-                outer_batch=config["outer_batch"],
+                outer_batch=OUTER_BATCH,
             )
         )
 
@@ -88,7 +92,7 @@ def main():
                 val_acc = np.mean([res[1] for res in val_results])
                 results["val_loss"].append(val_loss)
                 results["val_acc"].append(val_acc)
-                print(f"Validation Loss: {val_loss}, Validation Acc: {val_acc}") \
+                print(f"\n\nValidation Loss: {val_loss}, Validation Acc: {val_acc}\n\n") \
 
             global_step += 1
 

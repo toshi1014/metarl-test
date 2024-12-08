@@ -51,7 +51,7 @@ def adaptation_per_task(model, dataset, loss_fn, train_step, device, create_grap
     task_acc = torch.eq(predicted_labels, query_y).float().mean().item()
     task_accuracies.append(task_acc)
 
-    return task_accuracies, query_loss,  total_loss
+    return query_loss, task_accuracies, total_loss
 
 
 def adaptation(model, optimizer, batch, loss_fn, train_step, device):
@@ -62,7 +62,7 @@ def adaptation(model, optimizer, batch, loss_fn, train_step, device):
     outer_loss = 0
 
     for task_idx in range(num_task):  # Loop over tasks
-        task_accuracies, query_loss, total_loss = adaptation_per_task(
+        query_loss, task_accuracies, total_loss = adaptation_per_task(
             model,
             [batch[i][task_idx] for i in range(4)],
             loss_fn,
@@ -101,7 +101,7 @@ def validation(model, batch, loss_fn, train_step, device):
     num_task = batch[0].size(0)
 
     for task_idx in range(num_task):  # Loop over tasks
-        task_accuracies, query_loss, total_loss = adaptation_per_task(
+        query_loss, task_accuracies, total_loss = adaptation_per_task(
             model,
             [batch[i][task_idx] for i in range(4)],
             loss_fn,
