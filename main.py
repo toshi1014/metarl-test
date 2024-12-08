@@ -71,8 +71,7 @@ def main():
             )
             results["train_loss"].append(loss)
             results["train_acc"].append(acc)
-            print(f"Epoch: {epoch}, Step: {
-                  step}, Train Loss: {loss}, Train Acc: {acc}")
+            print(f"Epoch: {epoch}, Step: {step}, Train Loss: {loss}, Train Acc: {acc}") \
 
             if global_step % 20 == 0:
                 val_results = [
@@ -89,8 +88,7 @@ def main():
                 val_acc = np.mean([res[1] for res in val_results])
                 results["val_loss"].append(val_loss)
                 results["val_acc"].append(val_acc)
-                print(f"Validation Loss: {
-                      val_loss}, Validation Acc: {val_acc}")
+                print(f"Validation Loss: {val_loss}, Validation Acc: {val_acc}") \
 
             global_step += 1
 
